@@ -28,10 +28,10 @@ function chat() {
 
 client.on('message', (msg) => {
     const data = msg.toString();
-    if (data !== 'ok') {
+    if (data !== '✓') {
         console.log(data);
     }
-    if (data === 'ok') {
+    if (data === '✓') {
         chat(); 
     }
 });

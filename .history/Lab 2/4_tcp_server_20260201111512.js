@@ -1,5 +1,6 @@
 const net = require('net');
 
+// Xử lý các lệnh
 function processCommand(cmd, text, ...params) {
     switch(cmd) {
         case 'UPPER':
@@ -7,9 +8,11 @@ function processCommand(cmd, text, ...params) {
         case 'LOWER':
             return text.toLowerCase();
         case 'DELETE':
+            // DELETE text start end
             const [start, end] = params.map(Number);
             return text.slice(0, start) + text.slice(end);
         case 'INSERT':
+            // INSERT text position substring
             const pos = Number(params[0]);
             const substr = params[1];
             return text.slice(0, pos) + substr + text.slice(pos);

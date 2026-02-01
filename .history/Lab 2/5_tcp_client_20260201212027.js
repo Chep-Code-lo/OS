@@ -5,7 +5,7 @@ const client = new net.Socket();
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
 client.connect(5004, '127.0.0.1', () => {
-    console.log('ok - Kết nối thành công!\n');
+    console.log('✓ Kết nối thành công!\n');
 });
 
 client.on('data', (data) => {
@@ -43,7 +43,7 @@ client.on('close', () => {
 const originalWrite = process.stdout.write;
 process.stdout.write = function(chunk, ...args) {
     const str = chunk.toString();
-    if (str.includes('ok - Đã gửi')) {
+    if (str.includes('✓ Đã gửi')) {
         originalWrite.apply(process.stdout, [chunk, ...args]);
         promptMessage();
     } else {

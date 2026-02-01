@@ -26,7 +26,7 @@ const server = net.createServer((socket) => {
         console.log(message);
         broadcast(message, socket);
         
-        socket.write('ok - Đã gửi\n');
+        socket.write('✓ Đã gửi\n');
     });
     
     socket.on('close', () => {

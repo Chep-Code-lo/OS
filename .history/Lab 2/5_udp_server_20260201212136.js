@@ -21,7 +21,7 @@ server.on('message', (msg, rinfo) => {
 
     broadcast(message, rinfo);
     
-    server.send('ok', rinfo.port, rinfo.address);
+    server.send('[OK]', rinfo.port, rinfo.address);
 });
 
 function broadcast(message, exclude) {

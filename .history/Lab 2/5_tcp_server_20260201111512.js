@@ -4,6 +4,7 @@ const readline = require('readline');
 const clients = [];
 const server = net.createServer((socket) => {
     
+    // Hỏi tên
     socket.write('Nhập tên của bạn: ');
     let username = '';
     let isNamed = false;
@@ -22,11 +23,13 @@ const server = net.createServer((socket) => {
             return;
         }
         
+        // Gửi tin nhắn
         const message = `[${username}]: ${msg}`;
         console.log(message);
         broadcast(message, socket);
         
-        socket.write('ok - Đã gửi\n');
+        // Xác nhận cho người gửi
+        socket.write('✓ Đã gửi\n');
     });
     
     socket.on('close', () => {
