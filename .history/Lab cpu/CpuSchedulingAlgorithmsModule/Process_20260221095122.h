@@ -1,0 +1,36 @@
+#ifndef __PROCESS__
+#define __PROCESS__
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#define ID_LEN 20
+
+
+typedef struct _process
+{
+    char id[ID_LEN];
+    int arrive_time;
+    int waiting_time;
+    int return_time;
+    int turnaround_time;
+    int response_time;
+    int burst;
+    int priority;
+    bool completed;
+} Process;
+
+typedef int Quantum;
+
+void process_init(Process p[], int len)
+{
+
+    for (int i = 0; i < len; i++){
+        p[i].waiting_time = 0;
+        p[i].return_time = 0;
+        p[i].response_time = 0;
+        p[i].completed = FALSE;
+    }
+}
+
+#endif

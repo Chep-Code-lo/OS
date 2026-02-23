@@ -21,7 +21,7 @@ function askInput() {
 
 client.on('data', (data) => {
     console.log(`→ ${data}\n`);
-    askInput();
+    askInput(); // Hỏi tiếp
 });
 
 client.on('close', () => {
