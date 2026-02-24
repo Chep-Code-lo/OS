@@ -22,7 +22,6 @@ inline void SJF(Processes &p){
         p[k].completed = true;
         done++;
     }
-
     cout << "\tSJF Scheduling Algorithm (Non-preemptive)\n\n";
     print_gantt(p, segs);
     print_averages(p);

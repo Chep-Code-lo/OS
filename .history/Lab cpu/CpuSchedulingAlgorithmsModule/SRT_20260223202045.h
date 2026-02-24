@@ -4,7 +4,6 @@
 inline void SRT(Processes &p) {
     reset_all(p);
     sort_by_arrive(p);
-
     auto segs = preemptive_sim(p,
         [](const Processes &p, const vector<int> &r, int t) -> int {
             int best = -1, bv = INT_MAX;
@@ -22,7 +21,6 @@ inline void SRT(Processes &p) {
             }
             return best;
         });
-
     cout << "\tSJF Preemptive (Shortest Remaining Time)\n\n";
     print_gantt(p, segs);
     print_averages(p);
