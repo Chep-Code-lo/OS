@@ -1,4 +1,4 @@
-# GIẢI THÍCH CODE - Lab Deadlock
+# Deadlock
 
 ---
 
