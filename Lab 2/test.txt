@@ -1,5 +1,0 @@
-Hello world
-This is a test file
-Hello everyone
-Hello Hello
-The word Hello appears many times
