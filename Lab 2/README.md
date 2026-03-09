@@ -1,0 +1,1348 @@
+# GIẢI THÍCH CODE TCP/UDP
+
+## MỤC LỤC
+- [Kiến thức nền tảng](#kiến-thức-nền-tảng)
+- [Bài 1: Giải phương trình bậc 2](#bài-1-giải-phương-trình-bậc-2)
+- [Bài 2: Nhân hai ma trận](#bài-2-nhân-hai-ma-trận)
+- [Bài 3: Thay thế chuỗi trong file](#bài-3-thay-thế-chuỗi-trong-file)
+- [Bài 4: Xử lý chuỗi](#bài-4-xử-lý-chuỗi)
+- [Bài 5: Chat room](#bài-5-chat-room)
+
+---
+
+## Kiến thức nền tảng
+
+### TCP (Transmission Control Protocol)
+
+**Đặc điểm:**
+- **Connection-oriented**: Phải thiết lập kết nối trước (3-way handshake)
+- **Reliable**: Đảm bảo dữ liệu đến đích đầy đủ, đúng thứ tự
+- **Flow control**: Kiểm soát tốc độ gửi/nhận để không bị tràn
+- **Error checking**: Tự động phát hiện lỗi và gửi lại gói tin bị mất
+- **Overhead**: Tốn tài nguyên hơn (header 20-60 bytes)
+
+**Cơ chế 3-way handshake:**
+```
+Client                    Server
+  │                         │
+  │────── SYN ─────────────>│  (Xin kết nối)
+  │                         │
+  │<───── SYN-ACK ──────────│  (Đồng ý + xác nhận)
+  │                         │
+  │────── ACK ─────────────>│  (Xác nhận hoàn tất)
+  │                         │
+  └─── Kết nối thành công ──┘
+```
+
+**Ví dụ:**
+```javascript
+// TCP Server - net.createServer()
+const server = net.createServer((socket) => {
+    // socket đại diện cho 1 kết nối cố định
+    socket.on('data', (data) => {
+        // Nhận dữ liệu từ chính kết nối đó
+        socket.write(result);  // Gửi lại cho chính client đó
+    });
+});
+
+// TCP Client - client.connect()
+client.connect(5000, '127.0.0.1', () => {
+    // Phải kết nối trước mới gửi được
+    client.write('Hello');  // Gửi qua kết nối đã thiết lập
+});
+```
+
+### UDP (User Datagram Protocol)
+
+**Đặc điểm:**
+- **Connectionless**: Không cần thiết lập kết nối, gửi trực tiếp
+- **Unreliable**: Không đảm bảo dữ liệu đến đích (có thể mất gói tin)
+- **No ordering**: Gói tin có thể đến không đúng thứ tự gửi
+- **Fast**: Nhanh hơn TCP (không có overhead kết nối)
+- **Overhead**: Nhẹ hơn (header chỉ 8 bytes)
+
+**Cơ chế gửi nhận:**
+```
+Client                    Server
+  │                         │
+  │──── Data packet 1 ─────>│  (có thể đến)
+  │──── Data packet 2 ─────>│  (có thể mất)
+  │──── Data packet 3 ─────>│  (có thể đến trước packet 1)
+  │                         │
+  └─── Không có xác nhận ────┘
+```
+
+**Ví dụ:**
+```javascript
+// UDP Server - dgram.createSocket()
+const server = dgram.createSocket('udp4');
+server.on('message', (msg, rinfo) => {
+    // rinfo chứa thông tin client (address, port)
+    // Phải chỉ định rõ gửi cho ai
+    server.send(result, rinfo.port, rinfo.address);
+});
+
+// UDP Client - gửi trực tiếp
+const client = dgram.createSocket('udp4');
+const msg = Buffer.from('Hello');
+// Không cần connect, gửi luôn
+client.send(msg, 5000, '127.0.0.1');
+```
+
+---
+
+### So sánh TCP vs UDP
+
+| Tiêu chí | TCP | UDP |
+|----------|-----|-----|
+| **Kết nối** | Cần thiết lập trước | Không cần |
+| **Độ tin cậy** | 100% đảm bảo đến đích | Không đảm bảo |
+| **Thứ tự** | Đúng thứ tự gửi | Có thể sai thứ tự |
+| **Tốc độ** | Chậm hơn | Nhanh hơn |
+| **Tài nguyên** | Tốn nhiều | Ít |
+| **Phát hiện lỗi** | Có, tự động gửi lại | Không |
+| **Module Node.js** | `net` | `dgram` |
+| **Tạo server** | `net.createServer()` | `dgram.createSocket()` |
+| **Gửi dữ liệu** | `socket.write(data)` | `socket.send(msg, port, address)` |
+| **Nhận dữ liệu** | `socket.on('data')` | `socket.on('message')` |
+| **Biết client** | Tự động (qua socket) | Phải lấy từ `rinfo` |
+
+**Ví dụ:**
+```javascript
+// TCP - Gửi và nhận đơn giản
+socket.write('Hello');           // Tự biết gửi cho ai
+socket.on('data', (data) => {}); // Tự biết nhận từ ai
+
+// UDP - Phải chỉ rõ
+socket.send(msg, 5000, '127.0.0.1');              // Phải chỉ định port, address
+socket.on('message', (msg, rinfo) => {            // rinfo chứa thông tin người gửi
+    console.log(`Từ ${rinfo.address}:${rinfo.port}`);
+});
+```
+
+---
+
+### Khi nào dùng TCP?
+
+**Dùng TCP khi:**
+- **Cần đảm bảo dữ liệu đến đích đầy đủ**
+- **Thứ tự tin nhắn quan trọng**
+- **Chấp nhận chậm hơn một chút để đổi lấy độ tin cậy**
+
+**Ví dụ thực tế:**
+
+**Bài 1 - Giải phương trình:** Dùng TCP
+- Lý do: Phải đảm bảo kết quả đúng 100% gửi về client
+- Nếu mất kết quả → user không biết nghiệm của phương trình
+
+**Bài 2 - Nhân ma trận:** Dùng TCP
+- Lý do: Ma trận có nhiều số, mất 1 số → kết quả sai hoàn toàn
+- Cần đảm bảo toàn bộ ma trận gửi đủ
+
+**Bài 3 - Thay thế file:** Dùng TCP
+- Lý do: File text phải đầy đủ, mất 1 dòng → file bị hỏng
+- Cần đảm bảo nội dung file nguyên vẹn
+
+**Bài 4 - Xử lý chuỗi:** Dùng TCP
+- Lý do: Lệnh và tham số phải đầy đủ
+- Nếu mất tham số → server xử lý sai
+
+**Bài 5 - Chat room:** Dùng TCP
+- Lý do: Tin nhắn phải đến đầy đủ, đúng thứ tự
+- Nếu mất tin → cuộc trò chuyện không hiểu được
+
+**Các ứng dụng khác dùng TCP:**
+- Web browsing (HTTP/HTTPS)
+- Email (SMTP, POP3, IMAP)
+- File transfer (FTP, SFTP)
+- Remote access (SSH, Telnet)
+- Database connections
+
+---
+
+### Khi nào dùng UDP?
+
+**Dùng UDP khi:**
+- **Tốc độ quan trọng hơn độ tin cậy**
+- **Chấp nhận mất một ít dữ liệu**
+- **Dữ liệu gửi thường xuyên, liên tục**
+- **Độ trễ (latency) phải thấp**
+
+**Ví dụ thực tế:**
+
+**Video call (Zoom, Skype):**
+- Mất vài frame video → không sao, vẫn xem được
+- Quan trọng là real-time, không bị giật lag
+- TCP chậm → bị delay, không real-time
+
+**Game online (PUBG, LOL, Valorant):**
+- Vị trí nhân vật cập nhật liên tục (60 lần/giây)
+- Mất 1-2 gói tin → không ảnh hưởng lớn (gói tin tiếp theo đã cập nhật vị trí mới)
+- TCP chậm → bị lag, chết mất
+
+**Live streaming (YouTube Live, Twitch):**
+- Stream video/audio liên tục
+- Mất vài khung hình → người xem không nhận ra
+- Quan trọng là mượt, không đứng hình
+
+**VoIP (gọi điện thoại qua mạng):**
+- Giọng nói real-time
+- Mất vài mili giây → không ảnh hưởng
+- TCP chậm → thoại bị delay, nói không kịp
+
+**DNS lookup:**
+- Chỉ cần hỏi 1 lần: "google.com IP là gì?"
+- Nếu không được → hỏi lại, đơn giản
+- Không cần thiết lập kết nối phức tạp như TCP
+
+**Sensor data (IoT):**
+- Cảm biến gửi nhiệt độ mỗi giây: 25°C, 25°C, 26°C...
+- Mất 1 giá trị → không sao, giá trị tiếp theo đã đến
+- Quan trọng là nhanh, tốn ít pin
+
+---
+
+### Các khái niệm JavaScript trong code
+
+**1. Callback Function**
+```javascript
+// Hàm được truyền như tham số, sẽ được gọi sau
+function input(name, cb) {
+    rl.question('Nhập: ', (answer) => {
+        cb(answer);  // Gọi callback với kết quả
+    });
+}
+```
+
+**2. Arrow Function**
+```javascript
+// Cú pháp ngắn gọn
+(param) => { return value }
+
+// Tương đương:
+function(param) { return value }
+```
+
+**3. Destructuring**
+```javascript
+// Lấy giá trị từ object
+const { m1, m2 } = { m1: [[1,2]], m2: [[3,4]] };
+// → m1 = [[1,2]], m2 = [[3,4]]
+
+// Lấy giá trị từ array
+const [a, b, c] = [1, 2, 3];
+// → a = 1, b = 2, c = 3
+```
+
+**4. Spread Operator (...)**
+```javascript
+function processCommand(cmd, text, ...params) {
+    // params là mảng chứa tất cả tham số còn lại
+}
+processCommand('DELETE', 'hello', 0, 5);  
+// → cmd = 'DELETE', text = 'hello', params = [0, 5]
+```
+
+**5. JSON - Chuyển đổi dữ liệu**
+```javascript
+// Object → String (để gửi qua mạng)
+const data = { m1: [[1,2]], m2: [[3,4]] };
+const str = JSON.stringify(data);  
+// → '{"m1":[[1,2]],"m2":[[3,4]]}'
+
+// String → Object (sau khi nhận)
+const obj = JSON.parse(str);  
+// → { m1: [[1,2]], m2: [[3,4]] }
+```
+
+**6. Buffer - Dữ liệu nhị phân**
+```javascript
+// Socket nhận/gửi dữ liệu dạng Buffer
+socket.on('data', (data) => {
+    const str = data.toString();  // Buffer → String
+});
+
+const msg = Buffer.from('Hello');  // String → Buffer
+socket.write(msg);
+```
+
+---
+
+## Bài 1: Giải phương trình bậc 2
+
+### 📌 Mục đích & Ứng dụng
+
+**Mục đích học tập:**
+- Hiểu cách thiết lập kết nối TCP client-server
+- Học cách gửi/nhận dữ liệu JSON qua mạng
+- Xử lý input từ người dùng và tính toán trên server
+
+**Ứng dụng thực tế:**
+1. **Máy tính khoa học từ xa**: Tính toán phức tạp trên server mạnh, client chỉ cần gửi yêu cầu
+2. **Công cụ giáo dục**: Học sinh gửi bài tập toán, server chấm và trả kết quả
+3. **API tính toán**: Microservice chuyên giải các phương trình toán học
+4. **Ứng dụng kỹ thuật**: Tính toán thiết kế kỹ thuật (cầu, nhà, máy móc) cần giải phương trình
+
+**Tại sao dùng TCP?**
+- ✅ Kết quả phải chính xác 100% (mất 1 số = sai kết quả)
+- ✅ Dữ liệu nhỏ, không cần tốc độ cao
+- ✅ Thích hợp cho tính toán một lần, trả kết quả rõ ràng
+
+### File: `1_tcp_server.js`
+
+```javascript
+// Dòng 1: Import module 'net' để làm việc với TCP socket
+const net = require('net');
+
+// Dòng 3-14: Hàm giải phương trình ax² + bx + c = 0
+function solve(a, b, c) {
+    // Dòng 4: Tính delta theo công thức Δ = b² - 4ac
+    const delta = b * b - 4 * a * c;
+    
+    // Dòng 5: Nếu delta < 0 → phương trình vô nghiệm (không có nghiệm thực)
+    if (delta < 0) return 'Vô nghiệm';
+    
+    // Dòng 6-9: Nếu delta = 0 → nghiệm kép
+    if (delta === 0) {
+        // Dòng 7: Tính nghiệm kép x = -b / (2a)
+        const x = -b / (2 * a);
+        // Dòng 8: Trả về kết quả, toFixed(2) làm tròn 2 chữ số thập phân
+        return `Nghiệm kép: x = ${x.toFixed(2)}`;
+    }
+    
+    // Dòng 10-11: Nếu delta > 0 → 2 nghiệm phân biệt
+    // Math.sqrt(delta) tính căn bậc 2 của delta
+    const x1 = (-b + Math.sqrt(delta)) / (2 * a);  // Nghiệm 1
+    const x2 = (-b - Math.sqrt(delta)) / (2 * a);  // Nghiệm 2
+    // Dòng 12: Trả về cả 2 nghiệm
+    return `x1 = ${x1.toFixed(2)}, x2 = ${x2.toFixed(2)}`;
+}
+
+// Dòng 16: Tạo TCP server
+// net.createServer() nhận callback được gọi mỗi khi có client kết nối
+// Tham số 'socket' là kết nối với client đó
+const server = net.createServer((socket) => {
+    // Dòng 17: In thông báo khi có client kết nối
+    console.log('Client kết nối!');
+    
+    // Dòng 18: Lắng nghe sự kiện 'data' - khi nhận dữ liệu từ client
+    socket.on('data', (data) => {
+        // Dòng 19: Chuyển Buffer thành String và xóa khoảng trắng đầu/cuối
+        const input = data.toString().trim();
+        
+        // Dòng 20: Tách chuỗi theo dấu cách, chuyển mỗi phần tử thành số
+        // Ví dụ: "1 -5 6" → ["1", "-5", "6"] → [1, -5, 6]
+        const nums = input.split(' ').map(Number);
+        
+        // Dòng 21: Destructuring - lấy 3 phần tử đầu làm a, b, c
+        const [a, b, c] = nums;
+        
+        // Dòng 23: In ra phương trình nhận được
+        console.log(`Nhận: ${a}x² + ${b}x + ${c} = 0`);
+        
+        // Dòng 24: Gọi hàm solve để giải phương trình
+        const result = solve(a, b, c);
+        
+        // Dòng 25: Gửi kết quả về client qua socket
+        socket.write(result);
+        
+        // Dòng 26: In kết quả đã gửi
+        console.log(`Gửi: ${result}\n`);
+    });
+});
+
+// Dòng 30: Cho server lắng nghe trên cổng 5000
+// Callback được gọi khi server sẵn sàng
+server.listen(5000, () => {
+    console.log('Server chạy tại cổng 5000\n');
+});
+```
+
+### File: `1_tcp_client.js`
+
+```javascript
+// Dòng 1-2: Import các module cần thiết
+const net = require('net');              // Module TCP socket
+const readline = require('readline');    // Module đọc input từ console
+
+// Dòng 3: Tạo một socket client để kết nối đến server
+const client = new net.Socket();
+
+// Dòng 5-8: Tạo interface để đọc input từ bàn phím
+const rl = readline.createInterface({
+    input: process.stdin,    // Đọc từ bàn phím
+    output: process.stdout   // Xuất ra console
+});
+
+// Dòng 10: Kết nối đến server
+// Tham số: (port, host, callback khi kết nối thành công)
+client.connect(5000, '127.0.0.1', () => {
+    // Dòng 11-12: In thông báo khi kết nối thành công
+    console.log('Kết nối thành công!');
+    console.log('Nhập 3 số a b c (cách nhau bởi dấu cách)\n');
+    
+    // Dòng 13: Gọi hàm để bắt đầu nhập dữ liệu
+    askInput();
+});
+
+// Dòng 16-20: Hàm hỏi người dùng nhập 3 số
+function askInput() {
+    // Dòng 17: Hiển thị prompt và đợi người dùng nhập
+    rl.question('Nhập a b c: ', (input) => {
+        // Dòng 18: Khi người dùng nhấn Enter, gửi dữ liệu đến server
+        client.write(input);
+    });
+}
+
+// Dòng 22-25: Lắng nghe dữ liệu từ server
+client.on('data', (data) => {
+    // Dòng 23: In kết quả nhận được từ server
+    console.log(`→ ${data}\n`);
+    
+    // Dòng 24: Hỏi tiếp để nhập bộ số mới
+    askInput();
+});
+
+// Dòng 27-30: Xử lý khi kết nối bị đóng
+client.on('close', () => {
+    // Dòng 28: In thông báo
+    console.log('Ngắt kết nối');
+    // Dòng 29: Đóng readline interface
+    rl.close();
+});
+```
+
+---
+
+## Bài 2: Nhân hai ma trận
+
+### 📌 Mục đích & Ứng dụng
+
+**Mục đích học tập:**
+- Học cách truyền dữ liệu phức tạp (ma trận 2D) qua mạng
+- Sử dụng JSON để serialize/deserialize dữ liệu
+- Xử lý tính toán trên server, client chỉ hiển thị kết quả
+- Hiểu cách gửi/nhận object/array qua TCP
+
+**Ứng dụng thực tế:**
+1. **Xử lý ảnh**: Ma trận pixel, filter, biến đổi ảnh (Photoshop, Instagram filters)
+2. **Machine Learning**: Nhân ma trận là phép toán cơ bản trong Neural Networks
+3. **Đồ họa 3D**: Biến đổi tọa độ 3D trong game, phim hoạt hình (Unity, Unreal Engine)
+4. **Kiểm định kết cấu**: Tính ứng suất trong xây dựng, kỹ thuật
+5. **Tài chính**: Phân tích danh mục đầu tư, rủi ro
+6. **Khoa học dữ liệu**: Xử lý bảng dữ liệu lớn (pandas, numpy)
+
+**Tại sao dùng TCP?**
+- ✅ Ma trận có nhiều số, mất 1 số = kết quả sai hoàn toàn
+- ✅ Phải đảm bảo dữ liệu đầy đủ và đúng thứ tự
+- ✅ Tính toán 1 lần, không cần real-time
+
+### File: `2_tcp_server.js`
+
+```javascript
+// Dòng 1: Import module net
+const net = require('net')
+
+// Dòng 3-13: Hàm nhân 2 ma trận
+// Tham số: a = ma trận A[m×n], b = ma trận B[n×p]
+// Kết quả: ma trận C[m×p]
+function solve(a, b){
+    // Dòng 4: Khởi tạo mảng kết quả rỗng
+    const res = [];
+    
+    // Dòng 5: Vòng lặp qua từng hàng của ma trận A
+    for(let i=0; i<a.length; ++i){
+        // Dòng 6: Tạo hàng thứ i của kết quả
+        res[i] = [];
+        
+        // Dòng 7: Vòng lặp qua từng cột của ma trận B
+        for(let j=0; j<b[0].length; ++j){
+            // Dòng 8: Khởi tạo phần tử res[i][j] = 0
+            res[i][j] = 0;
+            
+            // Dòng 9-10: Tính tổng tích
+            // res[i][j] = a[i][0]*b[0][j] + a[i][1]*b[1][j] + ... + a[i][k]*b[k][j]
+            for(let k=0; k<b.length; ++k)
+                res[i][j] += a[i][k]*b[k][j];  // Nhân và cộng dồn
+        }
+    }
+    // Dòng 12: Trả về ma trận kết quả
+    return res; 
+}
+
+// Dòng 15: Tạo TCP server
+const server = net.createServer((socket) => {
+    // Dòng 16: In thông báo khi client kết nối
+    console.log('Client connect');
+    
+    // Dòng 17: Lắng nghe dữ liệu từ client
+    socket.on('data', (data) => {
+        // Dòng 18: Parse JSON thành object
+        // Client gửi dạng: {"m1": [[1,2],[3,4]], "m2": [[5,6],[7,8]]}
+        const {m1, m2} = JSON.parse(data);
+        
+        // Dòng 19: Gọi hàm nhân ma trận
+        const ans = solve(m1, m2);
+        
+        // Dòng 20: In kết quả ra console
+        console.log('Ket qua', ans, '\n');
+        
+        // Dòng 21: Chuyển kết quả thành JSON string và gửi về client
+        socket.write(JSON.stringify(ans));
+        
+        // Dòng 22: In thông báo đã gửi
+        console.log('Gui');
+    });
+});
+
+// Dòng 26: Lắng nghe trên cổng 5000
+server.listen(5000, () => {
+    console.log('Serer chay ...')
+});
+```
+
+### File: `2_tcp_client.js`
+
+```javascript
+// Dòng 1-2: Import module
+const net = require('net');
+const readline = require('readline');
+
+// Dòng 4: Tạo socket client
+const client = new net.Socket();
+
+// Dòng 5: Tạo readline interface
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+// Dòng 7-16: Hàm hiển thị ma trận đẹp
+function show(m, name) {
+    // Dòng 8: In tên ma trận
+    console.log(`${name}:`);
+    
+    // Dòng 9: Vòng lặp qua từng hàng
+    for(let i=0; i<m.length; i++){
+        // Dòng 10: Tạo chuỗi cho 1 hàng, bắt đầu bằng 2 dấu cách
+        let row = '  ';
+        
+        // Dòng 11: Vòng lặp qua từng cột
+        for(let j=0; j<m[i].length; j++){
+            // Dòng 12: Thêm giá trị vào chuỗi, cách nhau 2 khoảng trắng
+            row += m[i][j] + '  ';
+        }
+        // Dòng 14: In chuỗi hàng ra console
+        console.log(row);
+    }
+}
+
+// Dòng 17-31: Hàm nhập ma trận từ người dùng
+// Tham số: name = tên ma trận, cb = callback function
+function input(name, cb){
+    // Dòng 18: Hỏi kích thước ma trận (số hàng r, số cột c)
+    rl.question(`${name} (Kích thước n, m): `, (size) => {
+        // Dòng 19: Parse thành 2 số
+        const [r, c] = size.split(' ').map(Number);
+        
+        // Dòng 20: Hỏi nhập tất cả các số (r*c số)
+        rl.question(`Nhập ${r*c} số: `, (line) => {
+            // Dòng 21: Tách chuỗi thành mảng số
+            const n = line.split(' ').map(Number);
+            
+            // Dòng 22: Khởi tạo ma trận rỗng
+            const m = [];
+            
+            // Dòng 23: Vòng lặp tạo từng hàng
+            for(let i=0; i<r; i++){
+                // Dòng 24: Tạo hàng thứ i
+                m[i] = [];
+                
+                // Dòng 25: Vòng lặp tạo từng cột
+                for(let j=0; j<c; j++){
+                    // Dòng 26: Lấy số từ mảng n theo công thức: vị trí = i*c + j
+                    // Ví dụ r=2, c=2: [1,2,3,4] → [[1,2],[3,4]]
+                    m[i][j] = n[i*c + j];
+                }
+            }
+            // Dòng 29: Gọi callback với ma trận đã tạo
+            cb(m);
+        });
+    });
+}
+
+// Dòng 33-36: Kết nối đến server
+client.connect(5000, '127.0.0.1', () => {
+    // Dòng 34: In thông báo kết nối OK
+    console.log('OK\n');
+    // Dòng 35: Bắt đầu nhập liệu
+    ask();
+});
+
+// Dòng 38-44: Hàm điều khiển luồng nhập liệu
+function ask(){
+    // Dòng 39: Nhập ma trận A
+    input('Ma trận A : ', (m1) => {
+        // Dòng 40: Sau khi nhập xong A, nhập ma trận B
+        input('Ma trận B', (m2) => {
+            // Dòng 41: In thông báo
+            console.log('\nGửi lên server ...');
+            
+            // Dòng 42: Gửi 2 ma trận dạng JSON đến server
+            client.write(JSON.stringify({ m1, m2 }));
+        });
+    });
+}
+
+// Dòng 46-51: Nhận kết quả từ server
+client.on('data', (data) => {
+    // Dòng 47: Parse JSON thành ma trận và hiển thị
+    show(JSON.parse(data), 'Kết quả ma trận A×B');
+    
+    // Dòng 48: Hỏi có muốn tiếp tục không
+    rl.question('\nTiếp? (y/n): ', (a) => {
+        // Dòng 49: Nếu nhập 'y', tiếp tục
+        if (a === 'y') ask();
+        // Dòng 50: Nếu không, đóng kết nối
+        else { client.destroy(); rl.close(); }
+    });
+});
+```
+
+---
+
+## Bài 3: Thay thế chuỗi trong file
+
+### 📌 Mục đích & Ứng dụng
+
+**Mục đích học tập:**
+- Học cách xử lý file text qua mạng
+- Đọc/ghi file trên server, client chỉ gửi yêu cầu
+- Sử dụng mảng UDP (so sánh với TCP)
+- Xử lý chuỗi và thao tác file
+
+**Ứng dụng thực tế:**
+1. **Công cụ refactoring code**: Tìm và thay tên biến, hàm trong project (VS Code Find & Replace)
+2. **Xử lý log files**: Thay thế sensitive data trước khi share logs
+3. **Content Management**: Tự động cập nhật nội dung website, thông báo
+4. **Template system**: Thay placeholder trong email template, document template
+5. **Data migration**: Chuyển đổi format dữ liệu cũ sang mới
+6. **Censorship/Filter**: Thay từ ngữ nhạy cảm trong comment, chat
+
+**Tại sao dùng UDP?**
+- ✅ Demo phân biệt UDP vs TCP
+- ✅ Nội dung file nhỏ, gửi 1 lần là đủ
+- 🔶 Thực tế nên dùng TCP để đảm bảo file không bị hỏng
+
+### File: `3_tcp_server.js`
+
+```javascript
+// Dòng 1: Import module net
+const net = require('net');
+
+// Dòng 3-5: Hàm thay thế tất cả s1 thành s2 trong content
+function replaceAll(content, s1, s2) {
+    // Dòng 4: Split chuỗi theo s1, rồi join lại bằng s2
+    // Ví dụ: "Hello world Hello" với s1="Hello", s2="Hi"
+    // → ["", " world ", ""] → "Hi world Hi"
+    return content.split(s1).join(s2);
+}
+
+// Dòng 7: Tạo TCP server
+const server = net.createServer((socket) => {
+    // Dòng 8: In thông báo
+    console.log('Client kết nối!\n');
+    
+    // Dòng 10: Lắng nghe dữ liệu từ client
+    socket.on('data', (data) => {
+        // Dòng 11-12: Parse JSON để lấy file content và 2 chuỗi
+        const request = JSON.parse(data.toString());
+        const { fileContent, s1, s2 } = request;
+        
+        // Dòng 14-15: In thông tin nhận được
+        console.log(`Nhận file (${fileContent.length} ký tự)`);
+        console.log(`Thay thế: "${s1}" → "${s2}"`);
+        
+        // Dòng 16: Gọi hàm thay thế
+        const result = replaceAll(fileContent, s1, s2);
+        
+        // Dòng 17: Đếm số lần xuất hiện của s1
+        // Cách đếm: split theo s1 sẽ tạo ra (n+1) phần, với n là số lần xuất hiện
+        const count = (fileContent.split(s1).length - 1);
+        
+        // Dòng 19: In số lần thay thế
+        console.log(`Đã thay thế ${count} lần\n`);
+        
+        // Dòng 20: Gửi kết quả về client dạng JSON
+        socket.write(JSON.stringify({ result, count }));
+    });
+});
+
+// Dòng 24: Lắng nghe trên cổng 5002
+server.listen(5002, () => {
+    console.log('Server chạy tại cổng 5002\n');
+});
+```
+
+---
+
+## Bài 4: Xử lý chuỗi
+
+### 📌 Mục đích & Ứng dụng
+
+**Mục đích học tập:**
+- Xử lý nhiều loại command/request khác nhau
+- Parse và validate input từ client
+- Tạo API đơn giản với nhiều operations
+- Sử dụng switch-case để route commands
+
+**Ứng dụng thực tế:**
+1. **Text Editor API**: Các tính năng edit text trong Google Docs, Word Online
+2. **String validation service**: Kiểm tra và chuẩn hóa input (username, email, phone)
+3. **Data preprocessing**: Làm sạch dữ liệu trước khi lưu vào database
+4. **Command-line tools**: Công cụ xử lý text trong Linux (sed, awk, grep)
+5. **Format converter**: Chuyển UPPER/lower case trong form, document
+6. **Password generator**: Xóa/chèn ký tự đặc biệt, tạo password mạnh
+
+**Tại sao dùng TCP?**
+- ✅ Lệnh và tham số phải đầy đủ, chính xác
+- ✅ Mất tham số = server xử lý sai hoặc crash
+- ✅ Thích hợp cho API pattern
+
+### File: `4_tcp_server.js`
+
+```javascript
+// Dòng 1: Import module net
+const net = require('net');
+
+// Dòng 3-23: Hàm xử lý các lệnh khác nhau
+// Tham số: cmd = tên lệnh, text = chuỗi cần xử lý, ...params = các tham số thêm
+function processCommand(cmd, text, ...params) {
+    // Dòng 4: Switch-case kiểm tra lệnh
+    switch(cmd) {
+        // Dòng 5-6: Lệnh UPPER - chuyển thành chữ HOA
+        case 'UPPER':
+            return text.toUpperCase();
+        
+        // Dòng 7-8: Lệnh LOWER - chuyển thành chữ thường
+        case 'LOWER':
+            return text.toLowerCase();
+        
+        // Dòng 9-12: Lệnh DELETE - xóa 1 đoạn chuỗi
+        case 'DELETE':
+            // Dòng 11: Lấy vị trí bắt đầu và kết thúc từ params
+            const [start, end] = params.map(Number);
+            // Dòng 12: Cắt 2 đoạn và nối lại
+            // Ví dụ: "hello world" với start=0, end=5 → "" + " world" = " world"
+            return text.slice(0, start) + text.slice(end);
+        
+        // Dòng 13-17: Lệnh INSERT - chèn chuỗi con
+        case 'INSERT':
+            // Dòng 15-16: Lấy vị trí và chuỗi con cần chèn
+            const pos = Number(params[0]);
+            const substr = params[1];
+            // Dòng 17: Cắt làm 2 đoạn, chèn substr vào giữa
+            // Ví dụ: "hello" với pos=5, substr=" world" → "hello" + " world" + "" = "hello world"
+            return text.slice(0, pos) + substr + text.slice(pos);
+        
+        // Dòng 18-19: Lệnh không hợp lệ
+        default:
+            return 'Lệnh không hợp lệ';
+    }
+}
+
+// Dòng 22: Tạo TCP server
+const server = net.createServer((socket) => {
+    // Dòng 23: In thông báo
+    console.log('Client kết nối!\n');
+    
+    // Dòng 25: Lắng nghe dữ liệu từ client
+    socket.on('data', (data) => {
+        // Dòng 26-27: Parse dữ liệu
+        // Format: "UPPER|hello world" → ["UPPER", "hello world"]
+        const parts = data.toString().split('|');
+        // Destructuring: phần tử đầu là cmd, thứ 2 là text, còn lại là params
+        const [cmd, text, ...params] = parts;
+        
+        // Dòng 29-31: In thông tin nhận được
+        console.log(`Lệnh: ${cmd}`);
+        console.log(`Text: ${text}`);
+        console.log(`Params: ${params.join(', ')}`);
+        
+        // Dòng 33: Gọi hàm xử lý lệnh
+        const result = processCommand(cmd, text, ...params);
+        // Dòng 34: In kết quả
+        console.log(`→ ${result}\n`);
+        
+        // Dòng 36: Gửi kết quả về client
+        socket.write(result);
+    });
+});
+
+// Dòng 40-42: Lắng nghe trên cổng 5003
+server.listen(5003, () => {
+    console.log('Server chạy cổng 5003');
+    console.log('Lệnh: UPPER, LOWER, DELETE, INSERT\n');
+});
+```
+
+---
+
+## Bài 5: Chat room
+
+### 📌 Mục đích & Ứng dụng
+
+**Mục đích học tập:**
+- Xử lý nhiều clients đồng thời (concurrent connections)
+- Broadcast message tới tất cả clients
+- Quản lý danh sách clients đang online
+- Phân biệt TCP vs UDP trong chat application
+
+**Ứng dứng thực tế:**
+
+**TCP Chat (5_tcp_server/client.js):**
+1. **Messaging apps**: Zalo, Telegram, WhatsApp, Facebook Messenger
+2. **Team collaboration**: Slack, Microsoft Teams, Discord (text channels)
+3. **Customer support**: Live chat trên website, chatbot
+4. **Online gaming chat**: Chat trong game MOBA, MMO
+5. **Trading platforms**: Chat giữa traders, thông báo giao dịch
+6. **IoT monitoring**: Thiết bị IoT gửi thông báo/warning
+
+**UDP Chat (5_udp_server/client.js):**
+1. **Voice/Video chat**: Discord voice, Zoom, Google Meet
+2. **Live streaming chat**: Twitch, YouTube Live comments
+3. **Multiplayer game**: Vị trí player update liên tục
+4. **Real-time dashboard**: Stock prices, crypto prices update
+
+**Tại sao có cả TCP và UDP?**
+
+**TCP Chat:**
+- ✅ Tin nhắn text phải đến đầy đủ, đúng thứ tự
+- ✅ Mất 1 tin = không hiểu cuộc trò chuyện
+- ✅ Tin nhắn quan trọng (hợp đồng, giao dịch, y tế)
+
+**UDP Chat:**
+- ✅ Tốc độ quan trọng hơn (âm thanh, hình ảnh real-time)
+- ✅ Mất vài frame video/âm thanh không sao
+- ✅ Giảm delay, latency thấp
+
+**So sánh 2 phiên bản:**
+
+| Tính năng | TCP Version | UDP Version |
+|----------|-------------|-------------|
+| **Độ tin cậy** | 100% đảm bảo | Có thể mất tin |
+| **Thứ tự** | Đúng thứ tự gửi | Có thể lộn xộn |
+| **Tốc độ** | Chậm hơn | Nhanh hơn |
+| **Use case** | Chat text | Voice/Video chat |
+| **Ví dụ** | Zalo, Messenger | Discord voice, Zoom |
+
+### File: `5_tcp_server.js`
+
+```javascript
+// Dòng 1-2: Import module
+const net = require('net');
+const readline = require('readline');
+
+// Dòng 4: Mảng lưu tất cả client đang kết nối
+const clients = [];
+
+// Dòng 5: Tạo TCP server
+const server = net.createServer((socket) => {
+    
+    // Dòng 7: Gửi yêu cầu nhập tên cho client mới
+    socket.write('Nhập tên của bạn: ');
+    
+    // Dòng 8-9: Biến lưu trạng thái
+    let username = '';     // Tên người dùng
+    let isNamed = false;   // Đã nhập tên chưa
+    
+    // Dòng 11: Lắng nghe dữ liệu từ client
+    socket.on('data', (data) => {
+        // Dòng 12: Lấy message và xóa khoảng trắng
+        const msg = data.toString().trim();
+        
+        // Dòng 14-23: Nếu chưa nhập tên
+        if (!isNamed) {
+            // Dòng 15: Lưu tên
+            username = msg;
+            
+            // Dòng 16: Thêm client vào danh sách
+            clients.push({ socket, username });
+            
+            // Dòng 17: In thông báo server
+            console.log(`[+] ${username} tham gia (${clients.length} online)\n`);
+            
+            // Dòng 19: Thông báo cho tất cả client khác
+            broadcast(`[SERVER] ${username} đã tham gia chat!`, socket);
+            
+            // Dòng 20: Gửi lời chào cho client vừa vào
+            socket.write(`Chào ${username}! Gõ tin nhắn để chat.\n\n`);
+            
+            // Dòng 21-22: Đánh dấu đã nhập tên, thoát khỏi hàm
+            isNamed = true;
+            return;
+        }
+        
+        // Dòng 25-26: Nếu đã nhập tên → xử lý tin nhắn chat
+        // Format tin nhắn: "[username]: message"
+        const message = `[${username}]: ${msg}`;
+        
+        // Dòng 27: In tin nhắn ra server console
+        console.log(message);
+        
+        // Dòng 28: Gửi tin nhắn cho tất cả client (trừ người gửi)
+        broadcast(message, socket);
+        
+        // Dòng 30-31: Xác nhận đã gửi cho người gửi
+        socket.write('✓ Đã gửi\n');
+    });
+    
+    // Dòng 34-41: Xử lý khi client ngắt kết nối
+    socket.on('close', () => {
+        // Dòng 35-36: Tìm vị trí của client trong mảng
+        const index = clients.findIndex(c => c.socket === socket);
+        
+        // Dòng 37: Nếu tìm thấy
+        if (index !== -1) {
+            // Dòng 38: Xóa khỏi mảng (1 phần tử tại vị trí index)
+            clients.splice(index, 1);
+            
+            // Dòng 39: In thông báo server
+            console.log(`[-] ${username} rời khỏi (${clients.length} online)\n`);
+            
+            // Dòng 40: Thông báo cho tất cả client còn lại
+            broadcast(`[SERVER] ${username} đã rời khỏi!`);
+        }
+    });
+});
+
+// Dòng 44-50: Hàm broadcast - gửi tin nhắn cho tất cả client
+// Tham số: message = nội dung, exclude = socket cần loại trừ (không gửi)
+function broadcast(message, exclude = null) {
+    // Dòng 45: Duyệt qua tất cả client
+    clients.forEach(client => {
+        // Dòng 46-48: Nếu không phải client cần loại trừ
+        if (client.socket !== exclude) {
+            // Gửi tin nhắn
+            client.socket.write(message + '\n');
+        }
+    });
+}
+
+// Dòng 52-57: Lắng nghe trên cổng 5004
+server.listen(5004, () => {
+    console.log('='.repeat(40));
+    console.log('  CHAT ROOM SERVER - TCP');
+    console.log('  Port: 5004');
+    console.log('='.repeat(40) + '\n');
+});
+```
+
+---
+
+## Cách chạy
+
+```bash
+# TCP - Luôn chạy server trước
+node 1_tcp_server.js  # Terminal 1
+node 1_tcp_client.js  # Terminal 2
+
+# UDP (tương tự)
+node 1_udp_server.js
+node 1_udp_client.js
+```
+
+---
+---
+
+# MULTITHREADING LAB PROGRAMS (Python)
+
+Phần này chứa các bài tập về multithreading (đa luồng) sử dụng Python cho môn Operating Systems.
+
+## 📚 MỤC LỤC - MULTITHREADING
+
+- [Bài 6: Statistical Calculator](#bài-6-statistical-calculator)
+- [Bài 7: Fibonacci Sequence Generator](#bài-7-fibonacci-sequence-generator)
+- [Bài 8: Prime Numbers Finder](#bài-8-prime-numbers-finder)
+- [Bài 9: Multithreaded TCP Date Server](#bài-9-multithreaded-tcp-date-server)
+- [Key Threading Concepts](#key-threading-concepts-demonstrated)
+- [Testing Tips](#testing-tips)
+
+---
+
+## Bài 6: Statistical Calculator
+
+### 📌 Mục đích & Ứng dụng
+
+**Mục đích học tập:**
+- Hiểu cách tạo và quản lý nhiều threads
+- Học cách chia nhỏ công việc cho các worker threads
+- Sử dụng global variables để share data giữa threads
+- Synchronization với `thread.join()` để đợi threads hoàn thành
+
+**Ứng dụng thực tế:**
+1. **Data Analytics**: Tính toán thống kê song song trên big data (Apache Spark, pandas parallel)
+2. **Real-time monitoring**: Tính average/min/max của CPU, RAM, Network metrics
+3. **Financial analysis**: Phân tích giá cổ phiếu (average price, peak, bottom)
+4. **Sensor networks**: Xử lý dữ liệu từ nhiều cảm biến (nhiệt độ, độ ẩm, áp suất)
+5. **Game development**: Tính điểm trung bình, highest score, lowest score của players
+6. **Quality control**: Phân tích sản phẩm (trung bình, tốt nhất, tệ nhất)
+
+**Tại sao dùng multithreading?**
+- ✅ 3 phép tính độc lập có thể chạy song song
+- ✅ Tăng tốc độ xử lý với multi-core CPU
+- ✅ Demo cơ bản về parallel computing
+
+### Mô tả chi tiết
+
+Program nhận một dãy số từ command line và tạo 3 worker threads riêng biệt:
+- **Thread 1**: Tính giá trị trung bình (average)
+- **Thread 2**: Tìm giá trị nhỏ nhất (minimum) 
+- **Thread 3**: Tìm giá trị lớn nhất (maximum)
+
+Các biến `average`, `minimum`, `maximum` được lưu global. Worker threads sẽ set các giá trị này, và parent thread sẽ xuất kết quả sau khi tất cả workers đã kết thúc.
+
+### Usage
+
+```bash
+python 6_statistics.py 90 81 78 95 79 72 85
+```
+
+### Expected Output
+
+```
+Input numbers: [90, 81, 78, 95, 79, 72, 85]
+Calculating statistics using multiple threads...
+
+The average value is 82
+The minimum value is 72
+The maximum value is 95
+```
+
+### Key Functions
+
+- `calculate_average(numbers)`: Thread tính trung bình
+- `calculate_minimum(numbers)`: Thread tìm giá trị min
+- `calculate_maximum(numbers)`: Thread tìm giá trị max
+
+### Concepts
+
+Thread creation, global variables, thread synchronization with join()
+
+---
+
+## Bài 7: Fibonacci Sequence Generator
+
+### 📌 Mục đích & Ứng dụng
+
+**Mục đích học tập:**
+- Hiểu parent-child thread relationship
+- Học cách child thread tính toán và parent thread đợi kết quả
+- Sử dụng shared data structure (list) giữa threads
+- Đồng bộ hóa với `join()` để đảm bảo child thread hoàn thành
+
+**Ứng dụng thực tế:**
+1. **Background tasks**: Web app tạo report ở background, main thread tiếp tục xử lý requests
+2. **Image processing**: Resize/compress ảnh trong thread riêng, UI không bị đơ
+3. **Data export**: Export large dataset to CSV/Excel ở background
+4. **Email sending**: Gửi email trong thread riêng, không block main application
+5. **Algorithm visualization**: Generate visualization data trong background
+6. **Machine learning**: Train model trong thread riêng, app vẫn responsive
+
+**Tại sao dùng multithreading?**
+- ✅ Main thread không bị block khi child đang tính toán
+- ✅ Responsive UI/UX (trong real app)
+- ✅ Demo pattern: "submit job → wait → get result"
+
+### Mô tả chi tiết
+
+Dãy Fibonacci: `0, 1, 1, 2, 3, 5, 8, ...`
+Công thức: `fib(0)=0, fib(1)=1, fib(n)=fib(n-1)+fib(n-2)`
+
+**Cách hoạt động:**
+1. User nhập số lượng Fibonacci numbers cần generate qua command line
+2. Program tạo một thread riêng để generate dãy Fibonacci
+3. Dãy được lưu trong shared data structure (list)
+4. Parent thread phải đợi child thread hoàn thành (sử dụng `join()`)
+5. Sau khi child thread kết thúc, parent thread mới xuất dãy số
+
+### Usage
+
+```bash
+python 7_fibonacci.py 10
+```
+
+### Expected Output
+
+```
+Generating first 10 Fibonacci numbers...
+
+Fibonacci sequence (10 numbers):
+[0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
+
+Formatted output:
+fib(0) = 0
+fib(1) = 1
+fib(2) = 1
+...
+fib(9) = 34
+```
+
+### Key Functions
+
+- `generate_fibonacci(n)`: Thread function sinh dãy Fibonacci với n phần tử
+- Sử dụng list `fibonacci_sequence` làm shared data
+
+### Concepts
+
+Thread synchronization, parent-child thread coordination, shared data structures
+
+---
+
+## Bài 8: Prime Numbers Finder
+
+### 📌 Mục đích & Ứng dụng
+
+**Mục đích học tập:**
+- Hiểu distributed/parallel computing
+- Học cách chia công việc cho nhiều threads (work distribution)
+- Thread-safe operations với locks
+- Tối ưu hóa performance bằng parallel processing
+
+**Ứng dụng thực tế:**
+1. **Cryptography**: Tìm số nguyên tố lớn cho RSA encryption
+2. **Password cracking**: Brute force attack với nhiều threads
+3. **Web scraping**: Crawl nhiều pages đồng thời
+4. **Data processing**: Xử lý millions of records song song (MapReduce)
+5. **Video encoding**: Encode nhiều chunks của video cùng lúc
+6. **Scientific computing**: Simulations, weather forecasting, physics calculations
+7. **Database indexing**: Build index cho large tables song song
+
+**Tại sao dùng multithreading?**
+- ✅ Giảm thời gian xử lý từ O(n) xuống O(n/t) với t threads
+- ✅ Tận dụng multi-core CPU (4 cores → gần 4x nhanh hơn)
+- ✅ Scalable: Càng nhiều threads, càng nhanh
+
+### Mô tả chi tiết
+
+Program tìm tất cả số nguyên tố ≤ N sử dụng T threads.
+
+**Extension (Phần mở rộng):**
+- N: Số cần tìm primes (tìm prime ≤ N)
+- T: Số lượng threads
+- Mỗi thread: Xử lý N/T numbers
+- Kết quả: T threads trả về → parent thread gom lại và output
+
+**Cách hoạt động:**
+1. Chia range [2, N] thành T phần
+2. Mỗi thread kiểm tra một range riêng: Prime(x, y)
+3. Mỗi thread lưu kết quả vào local list
+4. Sử dụng lock để add kết quả vào global list (thread-safe)
+5. Parent thread đợi tất cả threads xong, sort và xuất kết quả
+
+### Usage
+
+```bash
+python 8_primes.py 100 4
+```
+
+**Parameters:**
+- N: Upper limit for prime search
+- T: Number of threads (default: 4)
+
+### Expected Output
+
+```
+Finding all prime numbers <= 100 using 4 threads...
+
+Thread 1: Checking range [2, 26]
+Thread 2: Checking range [27, 51]
+Thread 3: Checking range [52, 76]
+Thread 4: Checking range [77, 100]
+
+Found 25 prime numbers:
+[2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97]
+
+Formatted output (10 per row):
+[2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
+[31, 37, 41, 43, 47, 53, 59, 61, 67, 71]
+[73, 79, 83, 89, 97]
+```
+
+### Key Functions
+
+- `is_prime(n)`: Kiểm tra một số có phải số nguyên tố không
+- `find_primes_in_range(start, end)`: Thread function tìm primes trong range [start, end]
+- Sử dụng `threading.Lock()` để đảm bảo thread-safe khi thêm vào global list
+
+### Concepts
+
+Thread pool, work distribution, thread-safe data structures, locks
+
+---
+
+## Bài 9: Multithreaded TCP Date Server
+
+### 📌 Mục đích & Ứng dụng
+
+**Mục đích học tập:**
+- Kết hợp network programming với multithreading
+- Hiểu concurrent server architecture
+- Handle multiple clients đồng thời
+- Thread-safe counter và daemon threads
+
+**Ứng dụng thực tế:**
+1. **Web servers**: Apache, Nginx handle thousands of requests đồng thời
+2. **Chat servers**: WhatsApp, Telegram server xử lý millions of connections
+3. **Game servers**: PUBG, LOL, Valorant handle nhiều players cùng lúc
+4. **API servers**: REST API serve nhiều clients song song
+5. **Database servers**: MySQL, PostgreSQL handle concurrent connections
+6. **Streaming servers**: Netflix, YouTube serve millions of streams
+7. **IoT platforms**: Handle data từ thousands of IoT devices
+
+**Tại sao dùng multithreading?**
+- ✅ Mỗi client được xử lý bởi thread riêng → không block nhau
+- ✅ Server có thể serve thousands of clients đồng thời
+- ✅ Tận dụng multi-core để tăng throughput
+- ✅ Pattern chuẩn cho production servers
+
+### Mô tả chi tiết
+
+Đây là bài mở rộng của socket-based date server, được modify để server phục vụ mỗi client request trong một thread riêng biệt.
+
+**Cách hoạt động:**
+1. Server lắng nghe trên port được chỉ định
+2. Mỗi khi có client connect, server:
+   - Accept connection
+   - Tăng client counter (thread-safe với lock)
+   - Tạo một thread mới để handle client đó
+   - Thread gửi current date/time cho client
+   - Đóng connection sau khi gửi xong
+3. Main thread tiếp tục lắng nghe client mới
+4. Nhiều clients có thể connect đồng thời
+
+### Usage
+
+```bash
+# Terminal 1 - Start server
+python 9_tcp_server_threaded.py 8080
+
+# Terminal 2, 3, 4... - Connect clients
+python 9_tcp_client_test.py 8080
+```
+
+### Expected Output
+
+**Server:**
+```
+========================================
+Multithreaded TCP Date Server
+========================================
+Server listening on 127.0.0.1:8080
+Press Ctrl+C to stop the server
+========================================
+
+[Main] Created thread 1 for client ('127.0.0.1', 54321)
+[Main] Active threads: 2
+
+[Thread 1] Connected to client: ('127.0.0.1', 54321)
+[Thread 1] Sent date/time to ('127.0.0.1', 54321)
+[Thread 1] Connection closed with ('127.0.0.1', 54321)
+```
+
+**Client:**
+```
+Connecting to server at 127.0.0.1:8080...
+Connected!
+
+Response from server:
+========================================
+Server Date/Time: 2026-02-01 14:30:45
+Client ID: 1
+========================================
+
+Connection closed
+```
+
+### Key Features
+
+- Mỗi client connection được handle bởi dedicated thread
+- Server có thể handle nhiều clients đồng thời
+- Thread-safe client ID counter (sử dụng lock)
+- Daemon threads để tự động cleanup khi program exits
+- Proper error handling và connection cleanup
+
+### Key Functions
+
+- `handle_client(client_socket, client_address, client_id)`: Thread function xử lý mỗi client
+- Sử dụng `threading.Lock()` để protect shared counter
+- Thread được set `daemon=True` để không block program exit
+
+### Files
+
+- `9_tcp_server_threaded.py`: Multithreaded server
+- `9_tcp_client_test.py`: Test client để kết nối và test server
+
+### Concepts
+
+Network programming, concurrent server design, daemon threads, thread-safe counters
+
+---
+
+## Key Threading Concepts Demonstrated
+
+1. **Thread Creation**: Using `threading.Thread(target=function, args=(...))`
+2. **Thread Synchronization**: Using `thread.join()` to wait for completion
+3. **Global Variables**: Sharing data between threads
+4. **Thread-Safe Operations**: Using locks (`threading.Lock()`)
+5. **Daemon Threads**: Background threads that don't block program exit
+6. **Work Distribution**: Dividing tasks among multiple threads
+7. **Concurrent I/O**: Handling multiple network connections simultaneously
+
+---
+
+## Testing Tips
+
+### Test Program 6:
+```bash
+python 6_statistics.py 90 81 78 95 79 72 85
+python 6_statistics.py 1 2 3 4 5
+python 6_statistics.py 100
+```
+
+### Test Program 7:
+```bash
+python 7_fibonacci.py 5
+python 7_fibonacci.py 15
+python 7_fibonacci.py 20
+```
+
+### Test Program 8:
+```bash
+# Test with different thread counts
+python 8_primes.py 100 1   # Single thread
+python 8_primes.py 100 2   # Two threads
+python 8_primes.py 100 4   # Four threads
+python 8_primes.py 1000 8  # Eight threads, larger range
+```
+
+### Test Program 9:
+```bash
+# In separate terminals:
+# Terminal 1:
+python 9_tcp_server_threaded.py 8080
+
+# Terminals 2-5 (simultaneously):
+python 9_tcp_client_test.py 8080
+```
+
+---
+
+## Requirements
+
+- Python 3.6 or higher
+- Standard library only (no external dependencies)
+
+## Notes
+
+- All programs use Python's `threading` module
+- Error handling included for invalid inputs
+- Thread-safe implementations where needed
+- Clear output formatting for easy verification
