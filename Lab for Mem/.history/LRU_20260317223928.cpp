@@ -4,7 +4,7 @@ using namespace std;
 
 #define FRAMES_NUMBER 3
 
-int LFU(int pages[], int size)
+int LRU(int pages[], int size)
 {
     // 0) Initialize Frames With '-1'
     int frames[FRAMES_NUMBER];
@@ -52,19 +52,22 @@ int LFU(int pages[], int size)
             // 3) Page Replacement (Not Found & No Free Frame)
             if (!hasFreeFrame)
             {
-                // Array To Store The Used Count For Each Page In The Frames
-                int countUse[FRAMES_NUMBER] = {0};
+                // Array To Store The Last Index For Each Page In The Frames
+                int lastUse[FRAMES_NUMBER];
 
-                // Assign Count For Each Page In The Frames
+                // Assign Last Index For Each Page In The Frames
                 for (int i = 0; i < FRAMES_NUMBER; i++)
                     for (int p = pageIndex; p >= 0; p--)
                         if (pages[p] == frames[i])
-                            countUse[i]++;
+                        {
+                            lastUse[i] = p;
+                            break;
+                        }
 
-                // Find The Victim Frame (With The Lowest Count)
+                // Find The Victim Frame (With The Lowest Index)
                 int victim = 0;
                 for (int i = 0; i < FRAMES_NUMBER; i++)
-                    if (countUse[i] < countUse[victim])
+                    if (lastUse[i] < lastUse[victim])
                         victim = i;
 
                 frames[victim] = pages[pageIndex];
@@ -85,7 +88,7 @@ int main()
 {
     int pages[] = {1, 2, 3, 4, 1};
 
-    cout << "Number Of Page Faults = " << LFU(pages, 5);
+    cout << "Number Of Page Faults = " << LRU(pages, 5);
 
     getchar();
     return 0;

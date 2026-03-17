@@ -81,7 +81,7 @@ int LFU(int pages[], int size)
     return paeFaults;
 }
 
-int main()
+int main(int argc, char const *argv[])
 {
     int pages[] = {1, 2, 3, 4, 1};
 

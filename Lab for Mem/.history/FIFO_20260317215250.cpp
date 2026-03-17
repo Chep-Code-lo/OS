@@ -4,14 +4,15 @@ using namespace std;
 
 #define FRAMES_NUMBER 3
 
-int LFU(int pages[], int size)
+int FIFO(int pages[], int size)
 {
     // 0) Initialize Frames With '-1'
     int frames[FRAMES_NUMBER];
     for (int i = 0; i < FRAMES_NUMBER; i++)
         frames[i] = -1;
 
-    int paeFaults = 0; // Count The Page Faults
+    int pageFaults = 0; // Count The Page Faults
+    int victim = 0;    // The Index Of The Frame To Put A Page At, In Case No Free Frames Found
 
     // Go Through All Pages
     for (int pageIndex = 0; pageIndex < size; pageIndex++)
@@ -38,7 +39,7 @@ int LFU(int pages[], int size)
                 {
                     hasFreeFrame = true;
                     frames[i] = pages[pageIndex];
-                    paeFaults++;
+                    pageFaults++;
 
                     // Printing
                     cout << pages[pageIndex] << "\t\t";
@@ -52,23 +53,9 @@ int LFU(int pages[], int size)
             // 3) Page Replacement (Not Found & No Free Frame)
             if (!hasFreeFrame)
             {
-                // Array To Store The Used Count For Each Page In The Frames
-                int countUse[FRAMES_NUMBER] = {0};
-
-                // Assign Count For Each Page In The Frames
-                for (int i = 0; i < FRAMES_NUMBER; i++)
-                    for (int p = pageIndex; p >= 0; p--)
-                        if (pages[p] == frames[i])
-                            countUse[i]++;
-
-                // Find The Victim Frame (With The Lowest Count)
-                int victim = 0;
-                for (int i = 0; i < FRAMES_NUMBER; i++)
-                    if (countUse[i] < countUse[victim])
-                        victim = i;
-
                 frames[victim] = pages[pageIndex];
-                paeFaults++;
+                victim = (victim + 1) % FRAMES_NUMBER;
+                pageFaults++;
 
                 // Printing
                 cout << pages[pageIndex] << "\t\t";
@@ -78,14 +65,14 @@ int LFU(int pages[], int size)
             }
         }
     }
-    return paeFaults;
+    return pageFaults;
 }
 
-int main()
+int main(int argc, char const *argv[])
 {
     int pages[] = {1, 2, 3, 4, 1};
 
-    cout << "Number Of Page Faults = " << LFU(pages, 5);
+    cout << "Number Of Page Faults = " <<"\n" << FIFO(pages, 5);
 
     getchar();
     return 0;
