@@ -90,7 +90,7 @@ int main(int argc, char const *argv[])
 {
     int pages[] = {1, 2, 3, 4, 1};
 
-    cout << "Number Of Page Faults = \n" << Optimal(pages, 5);
+    cout << "Number Of Page Faults = " << Optimal(pages, 5);
 
     getchar();
     return 0;
